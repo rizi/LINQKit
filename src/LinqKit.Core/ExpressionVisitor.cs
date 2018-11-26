@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 // ReSharper disable once CheckNamespace
 namespace LinqKit
@@ -174,19 +176,22 @@ namespace LinqKit
 
                 return Visit(c.IfFalse);
             }
+
             Expression ifTrue = Visit(c.IfTrue);
             Expression ifFalse = Visit(c.IfFalse);
+
             if (test != c.Test || ifTrue != c.IfTrue || ifFalse != c.IfFalse)
             {
                 return Expression.Condition(test, ifTrue, ifFalse);
             }
+
             return c;
         }
 
         /// <summary> Return parameter expression </summary>
-        protected virtual Expression VisitParameter(ParameterExpression p)
+        protected virtual Expression VisitParameter(ParameterExpression parameterExpression)
         {
-            return p;
+            return parameterExpression;
         }
 
         /// <summary> Visit member access </summary>
@@ -200,50 +205,76 @@ namespace LinqKit
             return m;
         }
 
-        /// <summary> Visit method call </summary>
-		protected virtual Expression VisitMethodCall(MethodCallExpression m)
+        public static Type FindGenericType(Type generic, Type type)
         {
-            Expression obj = Visit(m.Object);
-            IEnumerable<Expression> args = VisitExpressionList(m.Arguments);
-            if (obj != m.Object || args != m.Arguments)
+            while (type != null && type != typeof(object))
             {
-                return Expression.Call(obj, m.Method, args);
+                if (type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == generic)
+                {
+                    return type;
+                }
+
+                if (generic.GetTypeInfo().IsInterface)
+                {
+                    foreach (Type intfType in type.GetInterfaces())
+                    {
+                        Type found = FindGenericType(generic, intfType);
+                        if (found != null) return found;
+                    }
+                }
+
+                type = type.GetTypeInfo().BaseType;
             }
-            return m;
+
+            return null;
+        }
+
+        /// <summary> Visit method call </summary>
+        protected virtual Expression VisitMethodCall(MethodCallExpression methodCallExpression)
+        {
+            Expression obj = Visit(methodCallExpression.Object);
+            IEnumerable<Expression> visitedArguments = VisitExpressionList(methodCallExpression.Arguments);
+
+            if (obj != methodCallExpression.Object || visitedArguments != methodCallExpression.Arguments)
+            {
+                return Expression.Call(obj, methodCallExpression.Method, visitedArguments);
+            }
+
+            return methodCallExpression;
         }
 
         /// <summary> Visit list of expressions </summary>
-		protected virtual ReadOnlyCollection<Expression> VisitExpressionList(ReadOnlyCollection<Expression> original)
+		protected virtual ReadOnlyCollection<Expression> VisitExpressionList(ReadOnlyCollection<Expression> originalExpressions)
         {
-            List<Expression> list = null;
-            for (int i = 0, n = original.Count; i < n; i++)
+            List<Expression> newExpressions = null;
+            for (int i = 0, n = originalExpressions.Count; i < n; i++)
             {
-                Expression p = Visit(original[i]);
-                if (list != null)
+                Expression p = Visit(originalExpressions[i]);
+                if (newExpressions != null)
                 {
-                    list.Add(p);
+                    newExpressions.Add(p);
                 }
-                else if (p != original[i])
+                else if (p != originalExpressions[i])
                 {
-                    list = new List<Expression>(n);
+                    newExpressions = new List<Expression>(n);
                     for (int j = 0; j < i; j++)
                     {
-                        list.Add(original[j]);
+                        newExpressions.Add(originalExpressions[j]);
                     }
-                    list.Add(p);
+                    newExpressions.Add(p);
                 }
             }
 
-            if (list != null)
+            if (newExpressions != null)
             {
 #if (PORTABLE || PORTABLE40)
                 return new ReadOnlyCollection<Expression>(list);
 #else
-                return list.AsReadOnly();
+                return newExpressions.AsReadOnly();
 #endif
             }
 
-            return original;
+            return originalExpressions;
         }
 
         /// <summary> Visit member assignment </summary>
@@ -300,8 +331,12 @@ namespace LinqKit
                     list.Add(b);
                 }
             }
+
             if (list != null)
+            {
                 return list;
+            }
+
             return original;
         }
 
@@ -326,6 +361,7 @@ namespace LinqKit
                     list.Add(init);
                 }
             }
+
             return list != null ? (IEnumerable<ElementInit>)list : original;
         }
 

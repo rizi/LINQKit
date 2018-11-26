@@ -1,12 +1,11 @@
-﻿#if NET35 || NET40 || PORTABLE40 || SILVERLIGHT
-namespace System.Reflection
+﻿namespace System.Reflection
 {
     /// <summary>
     /// https://github.com/castleproject/Core/blob/netcore/src/Castle.Core/Compatibility/IntrospectionExtensions.cs
     /// </summary>
 	internal static class IntrospectionExtensions
     {
-
+#if NET35 || NET40 || PORTABLE40 || SILVERLIGHT
         // This allows us to use the new reflection API which separates Type and TypeInfo
         // while still supporting .NET 3.5 and 4.0. This class matches the API of the same
         // class in .NET 4.5+, and so is only needed on .NET Framework versions before that.
@@ -18,6 +17,16 @@ namespace System.Reflection
         {
             return type;
         }
+
+        public static Type[] GetGenericTypeArguments(this Type type)
+        {
+            return type.GetGenericArguments();
+        }
+#else
+        public static Type[] GetGenericTypeArguments(this TypeInfo typeInfo)
+        {
+            return typeInfo.GenericTypeArguments;
+        }
+#endif
     }
 }
-#endif

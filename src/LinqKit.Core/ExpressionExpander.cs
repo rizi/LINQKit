@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -59,25 +60,75 @@ namespace LinqKit
 
         protected override Expression VisitMethodCall(MethodCallExpression m)
         {
+            var args = new [] { m.Arguments.Last() };
+            string methodName = m.Method.Name;
+            Type enumerableType = FindGenericType(typeof(IEnumerable<>), m.Type);
+            Type elementType = enumerableType.GetTypeInfo().GetGenericTypeArguments()[0];
+
+            if (1 == 8 && methodName == "Select" || methodName == "Contains")
+            {
+                Type[] typeArgs;
+                if (new[] { "Min", "Max", "Select", "OrderBy", "OrderByDescending", "ThenBy", "ThenByDescending" }.Contains(methodName))
+                {
+                    if (args.Length == 2)
+                    {
+                        typeArgs = new[] { elementType, args[0].Type, args[1].Type };
+                    }
+                    else
+                    {
+                        typeArgs = new[] { elementType, args[0].Type };
+                    }
+
+                    typeArgs = new[] { elementType };
+                }
+                else
+                {
+                    typeArgs = new[] { elementType };
+                }
+
+                //if (args.Length == 0)
+                //{
+                //    args = new[] { obj };
+                //}
+                //else
+                //{
+                //    if (new[] { "Contains", "Take", "Skip", "DefaultIfEmpty" }.Contains(methodName))
+                //    {
+                //        args = new[] { obj, args[0] };
+                //    }
+
+                //    //else
+                //    //{
+                //    //    if (args.Length == 2)
+                //    //    {
+                //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt), Expression.Lambda(args[1], innerIt) };
+                //    //    }
+                //    //    else
+                //    //    {
+                //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt) };
+                //    //    }
+                //    //}
+                //}
+
+                return Expression.Call(typeof(Queryable), methodName, typeArgs, args);
+            }
+
             if (m.Method.Name == "Invoke" && m.Method.DeclaringType == typeof(Extensions))
             {
-                var target = m.Arguments[0];
-                if (target is MemberExpression)
+                var targetExpression = m.Arguments[0];
+                if (targetExpression is MemberExpression memberExpression)
                 {
-                    target = TransformExpr((MemberExpression)target);
+                    targetExpression = TransformExpr(memberExpression);
                 }
-                if (target is ConstantExpression)
+                else if (targetExpression is ConstantExpression constantExpression)
                 {
-                    target = ((ConstantExpression)target).Value as Expression;
+                    targetExpression = constantExpression.Value as Expression;
                 }
-                if (target is UnaryExpression)
+                else if (targetExpression is UnaryExpression unaryExpression)
                 {
-                    target = ((UnaryExpression)target).Operand;
+                    targetExpression = unaryExpression.Operand;
                 }
-
-                var lambda = (LambdaExpression)target;
-
-                if (lambda != null)
+                else if (targetExpression is LambdaExpression lambda)
                 {
                     var replaceVars = _replaceVars == null ? new Dictionary<ParameterExpression, Expression>() : new Dictionary<ParameterExpression, Expression>(_replaceVars);
 
@@ -144,7 +195,7 @@ namespace LinqKit
                 return input;
             }
 #if EFCORE || NETSTANDARD || WINDOWS_APP || PORTABLE || UAP
-            //Collapse captured outer variables
+            // Collapse captured outer variables
             if (input.Member.DeclaringType != null && (!input.Member.DeclaringType.GetTypeInfo().IsNestedPrivate
                 || !input.Member.DeclaringType.Name.StartsWith("<>"))) // captured outer variable
             {
