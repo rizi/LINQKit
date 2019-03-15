@@ -60,58 +60,68 @@ namespace LinqKit
 
         protected override Expression VisitMethodCall(MethodCallExpression m)
         {
-            var args = new [] { m.Arguments.Last() };
+            var args = m.Arguments.ToArray();
             string methodName = m.Method.Name;
             Type enumerableType = FindGenericType(typeof(IEnumerable<>), m.Type);
             Type elementType = enumerableType.GetTypeInfo().GetGenericTypeArguments()[0];
 
-            if (1 == 8 && methodName == "Select" || methodName == "Contains")
-            {
-                Type[] typeArgs;
-                if (new[] { "Min", "Max", "Select", "OrderBy", "OrderByDescending", "ThenBy", "ThenByDescending" }.Contains(methodName))
-                {
-                    if (args.Length == 2)
-                    {
-                        typeArgs = new[] { elementType, args[0].Type, args[1].Type };
-                    }
-                    else
-                    {
-                        typeArgs = new[] { elementType, args[0].Type };
-                    }
+            // var expandableIds = db.MyModels.AsExpandable().Where(m => m.Id < 4).Select(m => m.Id);
+            // var result3 = db.MyModels.Where(m => expandableIds.Contains(m.Id)).ToList(); // Triggers two db hits
 
-                    typeArgs = new[] { elementType };
-                }
-                else
-                {
-                    typeArgs = new[] { elementType };
-                }
+            //if (m.Method.Name == "Select" && m.Method.DeclaringType == typeof(Queryable))
+            //{
+            //    Type[] typeArgs = new[] { elementType, args[0].Type, args[1].Type };
+            //    return Expression.Call(typeof(Queryable), methodName, typeArgs, args);
+            //    //return m.Arguments[0];
+            //}
 
-                //if (args.Length == 0)
-                //{
-                //    args = new[] { obj };
-                //}
-                //else
-                //{
-                //    if (new[] { "Contains", "Take", "Skip", "DefaultIfEmpty" }.Contains(methodName))
-                //    {
-                //        args = new[] { obj, args[0] };
-                //    }
+            //if (1 == 8 && methodName == "Select" || methodName == "Contains")
+            //{
+            //    Type[] typeArgs;
+            //    if (new[] { "Min", "Max", "Select", "OrderBy", "OrderByDescending", "ThenBy", "ThenByDescending" }.Contains(methodName))
+            //    {
+            //        if (args.Length == 2)
+            //        {
+            //            typeArgs = new[] { elementType, args[0].Type, args[1].Type };
+            //        }
+            //        else
+            //        {
+            //            typeArgs = new[] { elementType, args[0].Type };
+            //        }
 
-                //    //else
-                //    //{
-                //    //    if (args.Length == 2)
-                //    //    {
-                //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt), Expression.Lambda(args[1], innerIt) };
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt) };
-                //    //    }
-                //    //}
-                //}
+            //        typeArgs = new[] { elementType };
+            //    }
+            //    else
+            //    {
+            //        typeArgs = new[] { elementType };
+            //    }
 
-                return Expression.Call(typeof(Queryable), methodName, typeArgs, args);
-            }
+            //    //if (args.Length == 0)
+            //    //{
+            //    //    args = new[] { obj };
+            //    //}
+            //    //else
+            //    //{
+            //    //    if (new[] { "Contains", "Take", "Skip", "DefaultIfEmpty" }.Contains(methodName))
+            //    //    {
+            //    //        args = new[] { obj, args[0] };
+            //    //    }
+
+            //    //    //else
+            //    //    //{
+            //    //    //    if (args.Length == 2)
+            //    //    //    {
+            //    //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt), Expression.Lambda(args[1], innerIt) };
+            //    //    //    }
+            //    //    //    else
+            //    //    //    {
+            //    //    //        args = new[] { instance, Expression.Lambda(args[0], innerIt) };
+            //    //    //    }
+            //    //    //}
+            //    //}
+
+            //    return Expression.Call(typeof(Queryable), methodName, typeArgs, args);
+            //}
 
             if (m.Method.Name == "Invoke" && m.Method.DeclaringType == typeof(Extensions))
             {

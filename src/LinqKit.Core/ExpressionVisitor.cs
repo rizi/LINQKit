@@ -267,8 +267,8 @@ namespace LinqKit
 
             if (newExpressions != null)
             {
-#if (PORTABLE || PORTABLE40)
-                return new ReadOnlyCollection<Expression>(list);
+#if PORTABLE || PORTABLE40
+                return new ReadOnlyCollection<Expression>(newExpressions);
 #else
                 return newExpressions.AsReadOnly();
 #endif

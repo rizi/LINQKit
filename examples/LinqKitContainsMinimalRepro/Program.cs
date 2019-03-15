@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
 using LinqKit;
+using Newtonsoft.Json;
 
 namespace LinqKitContainsMinimalRepro
 {
@@ -31,8 +34,23 @@ namespace LinqKitContainsMinimalRepro
                 //var noExpandableEntities = db.MyModels.Where(m => m.Id < 4);
                 //var result2 = db.MyModels.Where(m => noExpandableEntities.Contains(m)).ToList(); // Triggers another single hit w/ the same SQL
 
-                var expandableIds = db.MyModels.AsExpandable().Where(m => m.Id < 4).Select(m => m.Id);
-                var result3 = db.MyModels.Where(m => expandableIds.Contains(m.Id)).ToList(); // Triggers two db hits
+
+                var expandableIds1 = db.MyModels.Where(m => m.Id < 4).Select(m => m.Id);
+                //Expression<Func<MyModel, bool>> predicate = (m) => expandableIds1.Contains(m.Id);
+
+                var result3a = db.MyModels.Where(m => expandableIds1.Contains(m.Id)).AsExpandable().ToList();
+                Console.Write(JsonConvert.SerializeObject(result3a, Formatting.Indented));
+
+
+                //var expandableIds2 = db.MyModels.AsExpandable().Where(m => m.Id < 4).Select(m => m.Id);
+                //var result3b = db.MyModels.Where(m => expandableIds2.Contains(m.Id)).ToList(); // Triggers two db hits
+                //Console.Write(JsonConvert.SerializeObject(result3b, Formatting.Indented));
+
+                //Expression<Func<MyModel, bool>> predicate)
+
+
+
+
                 // var result4 = db.MyModels.AsExpandable().Where(m => expandableIds.Contains(m.Id)).ToList(); // Triggers the same two hits
 
                 // var expandableEntities = db.MyModels.AsExpandable().Where(m => m.Id < 4);
